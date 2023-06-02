@@ -1,0 +1,5 @@
+configobj
+pyperclip
+sound_lib
+wxpython
+git+https://github.com/cartertemm/habitica-api/archive/refs/heads/main.zip
