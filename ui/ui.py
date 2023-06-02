@@ -105,6 +105,7 @@ class LoginDialog(wx.Dialog):
 				config.config.write()
 		config.config["api_user"] = api_user
 		config.config["api_key"] = api_key
+		config.config.write()
 		self.EndModal(success)
 
 

@@ -8,22 +8,30 @@ from habitica import api as habitica_api
 from habitica.constants import *
 from habitica import themes_manager
 
+from ui import config
 from ui import dialogs
 from ui import sound
 from ui import utils
 
 
-api = habitica_api.HabiticaAPI(
-	api_user="1e35b154-4e16-43c9-9468-5369da93980e",
-	api_key="d0aecee7-8388-49f7-8274-792531320ba2"
-)
-
+api = None
 sound_slug = "rosstavoTheme"
 player = sound.Sound()
 current_tasks = {}
 
 
+def init_api():
+	global api
+	api = habitica_api.HabiticaAPI(
+		api_user=config.config["api_user"],
+		api_key=config.config["api_key"]
+	)
+
+
+
 def login(parent, username, password):
+	if not api:
+		init_api()
 	try:
 		response = api.login(username, password)
 	except requests.exceptions.RequestException as exc:
