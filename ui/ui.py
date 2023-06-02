@@ -95,6 +95,9 @@ class LoginDialog(wx.Dialog):
 			wx.MessageBox("You must enter a username, password, API user, and API key.", "Error", wx.OK | wx.ICON_ERROR)
 			self.username.SetFocus()
 			return
+		config.config["api_user"] = api_user
+		config.config["api_key"] = api_key
+		config.config.write()
 		success = habitica.login(self, username, password)
 		if not success:
 			self.username.SetFocus()
@@ -102,9 +105,6 @@ class LoginDialog(wx.Dialog):
 		else:
 			if self.remember_me.IsChecked():
 				config.config["username"] = username
-				config.config.write()
-		config.config["api_user"] = api_user
-		config.config["api_key"] = api_key
 		config.config.write()
 		self.EndModal(success)
 
