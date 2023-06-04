@@ -406,6 +406,13 @@ class BaseTaskDialog(wx.Dialog):
 		difficulty_sizer.Add(difficulty_label, 0, label_flags, 5)
 		difficulty_sizer.Add(self.difficulty, 1, control_flags, 5)
 		self.main_sizer.Add(difficulty_sizer, 0, wx.EXPAND)
+		attribute_label = wx.StaticText(self.panel, label="attribute to effect:")
+		self.attribute = wx.Choice(self.panel, choices=list(habitica.user_attributes))
+		self.attribute.SetSelection(habitica.user_attributes.index(habitica.default_task_attribute))
+		attribute_sizer = wx.BoxSizer(wx.HORIZONTAL)
+		attribute_sizer.Add(attribute_label, 0, label_flags, 5)
+		attribute_sizer.Add(self.attribute, 1, control_flags, 5)
+		self.main_sizer.Add(attribute_sizer, 0, wx.EXPAND)
 		if self.include_reminders_box:
 			self.reminders_box = wx.StaticBox(self.panel, label="Reminders")
 			reminders_label = wx.StaticText(self.reminders_box, label="Reminders")
@@ -431,13 +438,15 @@ class BaseTaskDialog(wx.Dialog):
 		self.notes.SetValue(task_data["notes"])
 		# ugh
 		self.difficulty.SetSelection(list(habitica.difficulties.values()).index(task_data["priority"]))
+		self.attribute.SetSelection(habitica.user_attributes.index(task_data["attribute"]))
 
 	def get_task_result(self, include_id=False):
 		result = {
 			"text": self.text.GetValue(),
 			"type": self.type,
 			"notes": self.notes.GetValue(),
-			"priority": habitica.difficulties[self.difficulty.GetStringSelection()]
+			"priority": habitica.difficulties[self.difficulty.GetStringSelection()],
+			"attribute": self.attribute.GetStringSelection()
 		}
 		if self.data and include_id:
 			result["id"] = self.data["_id"]
