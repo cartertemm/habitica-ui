@@ -231,7 +231,7 @@ class  TaskTreePanel(BasePanel):
 		res = dlg.ShowModal()
 		if res in [wx.ID_CLOSE, wx.ID_CANCEL]:
 			return
-		res = dlg.get_task_result()
+		res = dlg.get_task_result(include_id=True)
 		if not res:
 			return
 		habitica.update_task(self, res)
@@ -399,13 +399,15 @@ class BaseTaskDialog(wx.Dialog):
 		# ugh
 		self.difficulty.SetSelection(list(habitica.difficulties.values()).index(task_data["priority"]))
 
-	def get_task_result(self):
+	def get_task_result(self, include_id=False):
 		result = {
 			"text": self.text.GetValue(),
 			"type": self.type,
 			"notes": self.notes.GetValue(),
 			"priority": habitica.difficulties[self.difficulty.GetStringSelection()]
 		}
+		if self.data and include_id:
+			result["id"] = self.data["_id"]
 		return result
 
 	def bind_events(self):
@@ -456,8 +458,8 @@ class HabitDialog(BaseTaskDialog):
 		self.plus.SetValue(task_data.get("up", False))
 		self.minus.SetValue(task_data.get("down", False))
 
-	def get_task_result(self):
-		result = super().get_task_result()
+	def get_task_result(self, include_id=False):
+		result = super().get_task_result(include_id=include_id)
 		result["up"] = self.plus.GetValue()
 		result["down"] = self.minus.GetValue()
 		return result
@@ -480,8 +482,8 @@ class RewardDialog(BaseTaskDialog):
 		super().populate_fields(task_data)
 		self.value.SetValue(task_data.get("value", 0))
 
-	def get_task_result(self):
-		result = super().get_task_result()
+	def get_task_result(self, include_id=False):
+		result = super().get_task_result(include_id=include_id)
 		result["value"] = self.value.GetValue()
 		return result
 

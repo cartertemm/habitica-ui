@@ -126,6 +126,17 @@ def create_task(parent, task_data):
 		return
 	update_tasks(parent)
 
+
+@utils.run_threaded
+def update_task(parent, task_data):
+	task_id= task_data["id"]
+	del task_data["id"]
+	response = api.update_task(task_id, **task_data)
+	if not response["success"]:
+		dialogs.error(parent, "Error", f"An error occurred while attempting to modify the given task: {response}")
+		return
+	update_tasks(parent)
+
 def copy_json(parent, cls):
 	pyperclip.copy(cls.to_json())
 
