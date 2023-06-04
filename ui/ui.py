@@ -21,7 +21,7 @@ class LoginDialog(wx.Dialog):
 			# if we already have a proven working username, focus the password field for convenience
 			self.password.SetFocus()
 		api_key = config.config.get("api_key", "")
-		api_user = config.config.get("api_key", "")
+		api_user = config.config.get("api_user", "")
 		self.api_key.SetValue(api_key)
 		self.api_user.SetValue(api_user)
 		self.remember_me.SetValue(True)
@@ -105,52 +105,108 @@ class LoginDialog(wx.Dialog):
 		else:
 			if self.remember_me.IsChecked():
 				config.config["username"] = username
-		config.config.write()
+				config.config.write()
 		self.EndModal(success)
 
 
-class TaskTree(wx.Frame):
+class TaskTreeFrame(wx.Frame):
 	def __init__(self, parent=None, title="Task Viewer", **kwargs):
 		super().__init__(parent, title=title, **kwargs)
 		self.panel = wx.Panel(self)
 		self.setup_layout()
-		self.init_menus()
 		self.bind_events()
-		self.add_task_types()
 		self.panel.SetMinSize((200, 200))
 		self.panel.SetSizerAndFit(self.main_sizer)
 		self.panel.Layout()
 
 	def setup_layout(self):
 		self.main_sizer = wx.BoxSizer(wx.VERTICAL)
-		self.tree_ctrl = wx.TreeCtrl(self.panel)
-		self.root = self.tree_ctrl.AddRoot("Task Types")
-		self.main_sizer.Add(self.tree_ctrl, 0, control_flags, 5)
-		self.new_button = wx.Button(self.panel, label="&New")
-		self.main_sizer.Add(self.new_button, 0, control_flags, 5)
+		nb_sizer = wx.BoxSizer(wx.HORIZONTAL)
+		self.notebook = wx.Notebook(self.panel)
+		self.tasks_panel = TaskTreePanel(self.notebook)
+		self.notebook.AddPage(self.tasks_panel, "Tasks")
+		nb_sizer.Add(self.notebook, 0, control_flags, 5)
+		self.main_sizer.Add(nb_sizer, 1, wx.EXPAND)
+		#self.main_sizer.Add(self.notebook, 1, wx.EXPAND)
+
+	def bind_events(self):
+		self.notebook.Bind(wx.EVT_NOTEBOOK_PAGE_CHANGED, self.on_notebook_page_changed)
+
+	def on_notebook_page_changed(self, event):
+		selected_page = self.notebook.GetSelection()
+		if selected_page == 0:
+			self.panel.update_focused_item_text("Tasks")
+
+
+class BasePanel(wx.Panel):
+	def __init__(self, parent):
+		super().__init__(parent)
+		self.setup_layout()
+		self.init_menus()
+		self.bind_events()
+
+	def setup_layout(self):
+		pass  # implement in subclass
+
+	def init_menus(self):
+		pass  # implement in subclass
+
+	def bind_events(self):
+		pass  # implement in subclass
+
+
+class  TaskTreePanel(BasePanel):
+	def __init__(self, parent):
+		super().__init__(parent)
+		self.add_task_types()
+		self.tree_ctrl.SetFocus()
 
 	def init_menus(self):
 		self.new_menu = wx.Menu()
 		for task_type in habitica.create_task_types:
 			item = self.new_menu.Append(wx.ID_ANY, task_type.capitalize())
 			self.Bind(wx.EVT_MENU, self.on_new_menu_item, item)
-		#entries = [[wx.ACCEL_CTRL, ord("N"), self.new_button.Id]]
-		#self.accelerator_table = wx.AcceleratorTable(entries)
-		#self.panel.SetAcceleratorTable(self.accelerator_table)
 		self.task_context_menu = wx.Menu()
 		self.mark_up_item = self.task_context_menu.Append(wx.ID_ANY, "Mark up")
 		self.mark_down_item = self.task_context_menu.Append(wx.ID_ANY, "Mark down")
 		self.copy_json_item = self.task_context_menu.Append(wx.ID_ANY, "Copy JSON")
 		self.delete_item = self.task_context_menu.Append(wx.ID_ANY, "Delete")
 
+	def setup_layout(self):
+		self.main_sizer = wx.BoxSizer(wx.VERTICAL)
+		self.tree_ctrl = wx.TreeCtrl(self)
+		self.root = self.tree_ctrl.AddRoot("Task Types")
+		self.main_sizer.Add(self.tree_ctrl, 0, control_flags, 5)
+		self.new_button = wx.Button(self, label="&New")
+		self.main_sizer.Add(self.new_button, 0, control_flags, 5)
+
 	def bind_events(self):
-		self.new_button.Bind(wx.EVT_BUTTON, self.on_new)
 		self.tree_ctrl.Bind(wx.EVT_TREE_ITEM_ACTIVATED, self.on_item_activate)
 		self.tree_ctrl.Bind(wx.EVT_TREE_ITEM_MENU, self.on_context_menu)
+		self.new_button.Bind(wx.EVT_BUTTON, self.on_new)
 		self.Bind(wx.EVT_MENU, self.on_mark_up, self.mark_up_item)
 		self.Bind(wx.EVT_MENU, self.on_mark_down, self.mark_down_item)
 		self.Bind(wx.EVT_MENU, self.on_copy_json, self.copy_json_item)
 		self.Bind(wx.EVT_MENU, self.on_delete, self.delete_item)
+		self.Bind(wx.EVT_SET_FOCUS, self.on_set_focus)
+
+	def on_set_focus(self, event):
+		self.SetFocusIgnoringChildren()
+
+	def on_new(self, event):
+		self.PopupMenu(self.new_menu)
+
+	def on_new_menu_item(self, event):
+		label = self.new_menu.GetLabel(event.Id).lower()
+		dlg = self.dialog_from_type(label)
+		dlg = dlg(self)
+		res = dlg.ShowModal()
+		if res in [wx.ID_CLOSE, wx.ID_CANCEL]:
+			return
+		res = dlg.get_task_result()
+		if not res:
+			return
+		habitica.create_task(self, res)
 
 	def on_mark_up(self, event):
 		task = self.get_focused_item_data()
@@ -165,9 +221,6 @@ class TaskTree(wx.Frame):
 			event.Skip()
 			return
 		habitica.score_task(self, task, up=False)
-
-	def on_new(self, event):
-		self.PopupMenu(self.new_menu)
 
 	def on_item_activate(self, event):
 		task = self.get_focused_item_data()
@@ -226,18 +279,6 @@ class TaskTree(wx.Frame):
 				self.mark_down_item.Enable(False)
 			#self.complete_item.Enable(False)
 		self.PopupMenu(self.task_context_menu)
-
-	def on_new_menu_item(self, event):
-		label = self.new_menu.GetLabel(event.Id).lower()
-		dlg = self.dialog_from_type(label)
-		dlg = dlg(self)
-		res = dlg.ShowModal()
-		if res in [wx.ID_CLOSE, wx.ID_CANCEL]:
-			return
-		res = dlg.get_task_result()
-		if not res:
-			return
-		habitica.create_task(self, res)
 
 	def dialog_from_type(self, type):
 		if type == "habit":
@@ -483,7 +524,7 @@ def start():
 	result = dlg.ShowModal()
 	dlg.Destroy()
 	if result == True:
-		tree = TaskTree(None)
+		tree = TaskTreeFrame(None)
 		app.app.SetTopWindow(tree)
 		tree.Show()
 	else:
