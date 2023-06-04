@@ -67,8 +67,30 @@ def play_sound_for_task(task, up):
 		else:
 			play_sound("minus_habit")
 
+def get_user(parent=None):
+	response_dict = api.get_user()
+	if not response_dict:
+		dialogs.error(parent, "Error", f"Could not retrieve user information: {response_dict}")
+		return False
+	return response_dict
+
+def get_tasks(parent=None):
+	response_dict = api.get_tasks_for_user()
+	if not response_dict.get("success"):
+		dialogs.error(parent, "Error", f"Could not retrieve your tasks: {response_dict}")
+		return False
+	tasks_dict = response_dict["data"]
+	return tasks_dict
+
+def get_incomplete_dailies(task_data):
+	choices = []
+	for task in task_data:
+		if task.type == "daily" and not task.completed:
+			choices.append(task)
+	return choices
+
 @utils.run_threaded
-def update_tasks(parent, tasks_dict={}):
+def update_tasks(parent, tasks_dict={}, update_ui=True):
 	global current_tasks
 	if not tasks_dict:
 		response = api.get_tasks_for_user()
@@ -82,11 +104,12 @@ def update_tasks(parent, tasks_dict={}):
 		items[type].append(item)
 	if not items:
 		print("error updating tasks")
-	wx.CallAfter(parent.update_task_types, **items)
+	if update_ui:
+		wx.CallAfter(parent.update_task_types, **items)
 
 
 @utils.run_threaded
-def score_task(parent, task, up=True):
+def score_task(parent, task, up=True, update_ui=True):
 	if not task or not hasattr(task, "id"):
 		return
 	up = "up" if up else "down"
@@ -96,7 +119,7 @@ def score_task(parent, task, up=True):
 	user = api.cached_user
 	response = api.score_task(task.id, up)
 	if not response["success"]:
-		dialogs.error(parent, "Error", f"An error occurred while attempting to score the selected task {up}: {response}")
+		wx.CallAfter(dialogs.error, parent, "Error", f"An error occurred while attempting to score the selected task {up}: {response}")
 		return
 	data = response["data"]
 	# do we have an item drop?
@@ -111,7 +134,8 @@ def score_task(parent, task, up=True):
 	if stat_changes:
 		wx.CallAfter(dialogs.information, parent, "Information", stat_changes)
 	wx.CallAfter(play_sound_for_task, task, up)
-	update_tasks(parent)
+	if update_ui:
+		update_tasks(parent)
 
 
 @utils.run_threaded

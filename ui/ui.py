@@ -109,9 +109,41 @@ class LoginDialog(wx.Dialog):
 		self.EndModal(success)
 
 
+class CronDialog(wx.Dialog):
+	def __init__(self, parent, task_data, incomplete_items, title="Yesterdays activities"):
+		super().__init__(parent, title=title)
+		self.task_data = task_data
+		self.incomplete_items = incomplete_items
+		self.setup_layout()
+
+	def setup_layout(self):
+		self.main_sizer = wx.BoxSizer(wx.VERTICAL)
+		dailies_box = wx.StaticBox(self, label="Check off any dailies you did yesterday")
+		dailies_sizer = wx.StaticBoxSizer(dailies_box, wx.HORIZONTAL)
+		self.checkboxes = []
+		for task in self.incomplete_items:
+			cb = wx.CheckBox(dailies_box, label=str(task))
+			cb.task = task
+			self.checkboxes.append(cb)
+			dailies_sizer.Add(cb, 1, control_flags, 5)
+		self.main_sizer.Add(dailies_sizer, 0, wx.EXPAND)
+		btn_sizer = wx.StdDialogButtonSizer()
+		self.done_btn = wx.Button(self, id=wx.ID_OK)
+		btn_sizer.AddButton(self.done_btn)
+		self.main_sizer.Add(btn_sizer, 0, wx.EXPAND)
+		btn_sizer.Realize()
+		self.SetAffirmativeId(self.done_btn.GetId())
+
+	def complete_selected(self):
+		for ctrl in self.checkboxes:
+			if not ctrl.IsChecked() or not hasattr(ctrl, "task"):
+				continue
+			habitica.score_task(self, ctrl.task, up=True, update_ui=False)
+
 class TaskTreeFrame(wx.Frame):
-	def __init__(self, parent=None, title="Task Viewer", **kwargs):
+	def __init__(self, parent=None, title="Task Viewer", cached_tasks=[], **kwargs):
 		super().__init__(parent, title=title, **kwargs)
+		self.cached_tasks = cached_tasks
 		self.panel = wx.Panel(self)
 		self.setup_layout()
 		self.bind_events()
@@ -296,7 +328,8 @@ class  TaskTreePanel(BasePanel):
 		for task_type in habitica.valid_task_types:
 			item = self.tree_ctrl.AppendItem(self.root, task_type)
 			setattr(self, task_type, item)
-		habitica.update_tasks(self)
+		cached_tasks = self.GetParent().GetParent().GetParent().cached_tasks or []
+		habitica.update_tasks(self, tasks_dict=cached_tasks)
 
 	def update_task_types(self, clear_children=True, **kwargs):
 		"""Update first level tree view items.
@@ -526,6 +559,19 @@ def start():
 	result = dlg.ShowModal()
 	dlg.Destroy()
 	if result == True:
+		user = habitica.get_user()
+		if not user:
+			app.exit()
+		if user and user.needsCron:
+			tasks = habitica.get_tasks()
+			if not tasks:
+				app.exit()
+			incomplete = habitica.get_incomplete_dailies(tasks)
+			if len(incomplete) > 0:
+				dlg = CronDialog(None, tasks, incomplete)
+				dlg.ShowModal()
+				dlg.complete_selected()
+				dlg.Destroy()
 		tree = TaskTreeFrame(None)
 		app.app.SetTopWindow(tree)
 		tree.Show()
