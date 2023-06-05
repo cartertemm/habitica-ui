@@ -201,6 +201,7 @@ class  TaskTreePanel(BasePanel):
 		self.task_context_menu = wx.Menu()
 		self.mark_up_item = self.task_context_menu.Append(wx.ID_ANY, "Mark up")
 		self.mark_down_item = self.task_context_menu.Append(wx.ID_ANY, "Mark down")
+		self.view_item = self.task_context_menu.Append(wx.ID_ANY, "View task")
 		self.copy_json_item = self.task_context_menu.Append(wx.ID_ANY, "Copy JSON")
 		self.delete_item = self.task_context_menu.Append(wx.ID_ANY, "Delete")
 
@@ -218,6 +219,7 @@ class  TaskTreePanel(BasePanel):
 		self.new_button.Bind(wx.EVT_BUTTON, self.on_new)
 		self.Bind(wx.EVT_MENU, self.on_mark_up, self.mark_up_item)
 		self.Bind(wx.EVT_MENU, self.on_mark_down, self.mark_down_item)
+		self.Bind(wx.EVT_MENU, self.on_item_activate, self.view_item)
 		self.Bind(wx.EVT_MENU, self.on_copy_json, self.copy_json_item)
 		self.Bind(wx.EVT_MENU, self.on_delete, self.delete_item)
 		self.Bind(wx.EVT_SET_FOCUS, self.on_set_focus)
