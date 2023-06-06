@@ -616,7 +616,10 @@ def start():
 			if len(incomplete) > 0:
 				dlg = CronDialog(None, tasks, incomplete)
 				dlg.ShowModal()
-				dlg.complete_selected()
+				try:
+					dlg.complete_selected()
+				except Exception as exc:
+					dialogs.error("Error", f"There was an error marking your dailys as complete: {exc}")
 				dlg.Destroy()
 		tree = TaskTreeFrame(None)
 		app.app.SetTopWindow(tree)

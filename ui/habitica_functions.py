@@ -89,6 +89,9 @@ def get_incomplete_dailies(task_data):
 			choices.append(task)
 	return choices
 
+def cron():
+	return api.cron()
+
 @utils.run_threaded
 def update_tasks(parent, tasks_dict={}, update_ui=True):
 	global current_tasks
