@@ -138,15 +138,18 @@ class CronDialog(wx.Dialog):
 		for ctrl in self.checkboxes:
 			if not ctrl.IsChecked() or not hasattr(ctrl, "task"):
 				continue
-			habitica.score_task(self, ctrl.task, up=True, update_ui=False)
+			# do not pass as a parent, as we only call this function after this dialog has been closed
+			habitica.score_task(None, ctrl.task, up=True, update_ui=False)
 
 class TaskTreeFrame(wx.Frame):
 	def __init__(self, parent=None, title="Task Viewer", cached_tasks=[], **kwargs):
 		super().__init__(parent, title=title, **kwargs)
 		self.cached_tasks = cached_tasks
 		self.panel = wx.Panel(self)
+		self.descendants = []
 		self.setup_layout()
 		self.bind_events()
+		self.update_descendant_tab_order()
 		self.panel.SetMinSize((200, 200))
 		self.panel.SetSizerAndFit(self.main_sizer)
 		self.panel.Layout()
@@ -163,11 +166,40 @@ class TaskTreeFrame(wx.Frame):
 
 	def bind_events(self):
 		self.notebook.Bind(wx.EVT_NOTEBOOK_PAGE_CHANGED, self.on_notebook_page_changed)
+		#self.notebook.Bind(wx.EVT_NAVIGATION_KEY, self.on_notebook_navigation)
+		self.Bind(wx.EVT_NAVIGATION_KEY, self.on_navigation)
 
 	def on_notebook_page_changed(self, event):
 		selected_page = self.notebook.GetSelection()
 		if selected_page == 0:
 			self.panel.update_focused_item_text("Tasks")
+
+	def get_last_enabled_descendant(self, item):
+		children = [i for i in item.GetChildren()]
+		if not children:
+			return
+		for child in children[::-1]:
+			if child.IsEnabled():
+				return child
+
+	def on_navigation(self, event):
+		#print(f"current focus: {event.GetCurrentFocus()}")
+		#print(f"find focus: {self.FindFocus()}")
+		if self.FindFocus() in self.descendants:
+			self.notebook.SetFocus()
+		elif not event.GetDirection():
+			event.Skip()
+			last_descendant = self.get_last_enabled_descendant(self.notebook.GetPage(self.notebook.GetSelection()))
+			if last_descendant and last_descendant != self.notebook:
+				last_descendant.SetFocus()
+		else:
+			event.Skip()
+
+	def update_descendant_tab_order(self):
+		for page_num in range(self.notebook.GetPageCount()):
+			last_descendant = self.get_last_enabled_descendant(self.notebook.GetPage(page_num))
+			if last_descendant:
+				self.descendants.append(last_descendant)
 
 
 class BasePanel(wx.Panel):
@@ -176,6 +208,9 @@ class BasePanel(wx.Panel):
 		self.setup_layout()
 		self.init_menus()
 		self.bind_events()
+
+	def tab_control_focus(self):
+		self.GetParent().SetFocus()
 
 	def setup_layout(self):
 		pass  # implement in subclass
