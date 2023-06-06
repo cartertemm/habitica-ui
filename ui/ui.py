@@ -140,6 +140,7 @@ class CronDialog(wx.Dialog):
 				continue
 			# do not pass as a parent, as we only call this function after this dialog has been closed
 			habitica.score_task(None, ctrl.task, up=True, update_ui=False)
+		print(habitica.cron())  # todo: currently we're eating the notifications
 
 class TaskTreeFrame(wx.Frame):
 	def __init__(self, parent=None, title="Task Viewer", cached_tasks=[], **kwargs):
