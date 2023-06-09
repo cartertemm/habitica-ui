@@ -294,6 +294,8 @@ class  TaskTreePanel(BasePanel):
 
 	def on_item_activate(self, event):
 		task = self.get_focused_item_data()
+		if not hasattr(task, "type"):
+			return
 		dlg = self.dialog_from_type(task.type)
 		if not dlg:  # we're on a tree view or item that is not a task
 			return
