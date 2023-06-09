@@ -138,7 +138,7 @@ def score_task(parent, task, up=True, update_ui=True):
 		wx.CallAfter(dialogs.information, parent, "Information", stat_changes)
 	wx.CallAfter(play_sound_for_task, task, up)
 	if update_ui:
-		update_tasks(parent)
+		update_tasks(parent, update_ui=update_ui)
 
 
 @utils.run_threaded
