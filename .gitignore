@@ -7,3 +7,4 @@ sounds/
 # distribution
 build/
 dist/
+.env/
