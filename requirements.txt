@@ -3,3 +3,4 @@ pyperclip
 sound_lib
 wxpython
 https://github.com/cartertemm/habitica-api/archive/refs/heads/main.zip
+appdirs
